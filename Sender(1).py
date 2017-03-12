@@ -19,7 +19,7 @@ class Sender(BasicSender.BasicSender):
         
 
     def send_data(self,msgtype, seqno):
-        data = self.infile.read(4072)
+        data = self.infile.read(4076)#header varies from 18-20B; packet size total = 4096
         if data == '':              #also need to make sure when packets are resent we seek
             return False            # to correct position
         else:
