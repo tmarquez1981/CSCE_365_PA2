@@ -10,7 +10,37 @@ This is a skeleton sender class. Create a fantastic transport protocol here.
 class Sender(BasicSender.BasicSender):
     # Main sending loop.
     def start(self):
-        raise NotImplementedError
+        self.seqno=0
+        success = self.send_data('start', self.seqno)#needs a start packet first
+        while success:
+            success = self.send_data('data', self.seqno)#breaks when eof; 'end' packet not yet implemented
+            if success and self.debug:
+                print 'success: sent sequence number %d' % (self.seqno)
+        
+
+    def send_data(self,msgtype, seqno):
+        data = self.infile.read(4072)
+        if data == '':              #also need to make sure when packets are resent we seek
+            return False            # to correct position
+        else:
+            packet = self.make_packet(msgtype,seqno,data)
+            self.send(packet)
+            self.seqno=seqno+1
+            while not self.wait_ack(self.seqno): #remove when sliding window implemented, we'll have to do ack differtently
+                self.send(packet)
+        return True
+
+
+    def wait_ack(self, expseqno):
+        if self.debug:
+            print 'waiting for ack %d' % (expseqno)
+        message = self.receive()
+        mtype, seqno, checksum, extra = self.split_packet(message)
+        if self.debug:
+            print 'ack received for sequence number ' + seqno
+        if Checksum.validate_checksum(message) and expseqno==int(seqno):
+            return True
+        return False
 
 '''
 This will be run if you run this script from the command line. You should not
