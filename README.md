@@ -1,9 +1,5 @@
 # CSCE_365_PA2
 
 Temporary notes(Ben):
-I'm not sure we will need to make a full UML, classes are laid out. The Sender class inherits from BasicSender.
-I say we start with just going down the bullet points she gave, coding in BasicSender. We can then make the sender a state machine, similar to TCP state machine
-  in the textbook. Maybe nearly exact, I haven't looked close enough yet thinking about UDP. State-machine to code should be simple and get us the extra credit
-  for variable sliding window.
-I think one of us has to start, so my idea was to plan out one bullet point minimumally and just dive into coding it. That will give us a more defined Sender class
-to do the rest of the bullet points. Then we code the state machine around it once it is functioning sending one packet at a time.
+-Need to design 5 packet sending at a time.
+  My ideas here include: make send_data recursive or while loop counting to 5 (I prefer looping, state machine will have to be implemented to some degree here). We also need some data structure to hold seq numbers, possibly list of seq# removing numbers as ack is received. When ack is not received or bad ack: we populate the list with 5 numbers starting with the lowest number still in the list. If table count == 0 then add 5 more of the next seq# to the table.
