@@ -35,6 +35,8 @@ class Sender(BasicSender.BasicSender):
             else:
                 eof = self.send_data('data',seqno)
             seqno+=1
+        if eof:
+            seqno-=1
         return eof, seqno
             
     #read from file and send the data as a single packet
