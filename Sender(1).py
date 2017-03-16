@@ -154,9 +154,8 @@ if __name__ == "__main__":
             dest = a
         elif o in ("-d", "--debug="):
             debug = True
-    
-    filename='C:\\Users\\brgur\\Documents\\Spring17\\Networks\\hw5\\test1.png'
-    debug=True
+            
+            
     s = Sender(dest,port,filename,debug)
     try:
         s.start()
