@@ -65,19 +65,21 @@ class Receiver():
         while True:
             try:
                 message, address = self.receive()
+                message = message.decode() # added decoding here . it may not be needed with pickel
                 msg_type, seqno, data, checksum = self._split_message(message)
                 try:
                     seqno = int(seqno)
                 except:
                     raise ValueError
                 if debug:
+                    #print("%s %d %s" % (msg_type, seqno, checksum))
                     print("%s %d %s %s" % (msg_type, seqno, data, checksum))
                 if Checksum.validate_checksum(message):
                     self.MESSAGE_HANDLER.get(msg_type,self._handle_other)(seqno, data, address)
                 elif self.debug:
                     print( "checksum failed: %s" % message)
 
-                if time.time() - self.last_cleanup > self.timeout:
+                if time.time() - self.last_cleanup > self.timeout or msg_type == 'end':
                     self._cleanup()
             except socket.timeout:
                 self._cleanup()
@@ -95,7 +97,8 @@ class Receiver():
     # sends a message to the specified address. Addresses are in the format:
     #   (IP address, port number)
     def send(self, message, address):
-        self.s.sendto(message, address)
+        self.s.sendto(message.encode(), address)
+        #self.s.sendto(message, address)
 
     # this sends an ack message to address with specified seqno
     def _send_ack(self, seqno, address):
@@ -121,21 +124,32 @@ class Receiver():
             conn = self.connections[address]
             ackno,res_data = conn.ack(seqno,data)
             for l in res_data:
-                if self.debug:
-                    print(l)
+                #if self.debug:
+                    #print(l)
                 conn.record(l)
             self._send_ack(ackno, address)
 
     # handle end packets
+    # End packet is a packet with no data
+    # A simple message letting the server know
+    # there is no more to send
     def _handle_end(self, seqno, data, address):
-        if address in self.connections:
-            conn = self.connections[address]
-            ackno, res_data = conn.ack(seqno,data)
-            for l in res_data:
-                if self.debug:
-                    print(l)
-                conn.record(l)
-            self._send_ack(ackno, address)
+        if self.debug:
+            print("handle end packet")
+        conn = self.connections[address]
+        conn.end()
+        del self.connections[address]
+        now = time.time()
+        self.last_cleanup = now
+        #if address in self.connections:
+         #   conn = self.connections[address]
+          #  ackno, res_data = conn.ack(seqno,data)
+           # for l in res_data:
+            #    if self.debug:
+             #       print(l)
+              #  conn.record(l)
+            #self._send_ack(ackno, address)
+        #conn.end()
 
     # I'll do the ack-ing here, buddy
     def _handle_ack(self, seqno, data, address):

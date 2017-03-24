@@ -4,6 +4,7 @@ import socket
 
 import Checksum
 import BasicSender
+import Packet
 
 '''
 This is a skeleton sender class. Create a fantastic transport protocol here.
@@ -23,8 +24,9 @@ class Sender(BasicSender.BasicSender):
             eof, maxackno = self.send_window(seqno)
             ackno=self.wait_window(seqno, maxackno)
             if ackno!=-1:
-                seqno=ackno            
-                
+                seqno=ackno
+
+
    #sends MAX_WINDOW number of packets, returns eof=true/false and highest expected ackno
     def send_window(self, seqno):
         maxseqno=seqno+self.WINDOW_SIZE
@@ -42,13 +44,21 @@ class Sender(BasicSender.BasicSender):
     #read from file and send the data as a single packet
     def send_data(self,msgtype, seqno):
         data = self.infile.read(4076)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
-        if data == '':
-            return True
-        else:
-            packet = self.make_packet(msgtype,seqno,data)
+        #if data == '':
+        if not data:
+            msgtype = 'end' # create end packet
+            newPacket = Packet.Packet(msgtype, seqno, data)
+            packet = newPacket.make_packet()
             self.send(packet)
             if self.debug:
-                print 'Sent # %d' % (seqno)
+                print('Sent # %d' % (seqno))
+            return True
+        else:
+            newPacket = Packet.Packet(msgtype, seqno, data) # create a packet object to encapsulate the packet info
+            packet = newPacket.make_packet()
+            self.send(packet)
+            if self.debug:
+                print('Sent # %d' % (seqno))
         return False
 
     #gets acks from seqno -- seqnomax for ackno, returns highest seqno (to be used for next window)
@@ -60,7 +70,7 @@ class Sender(BasicSender.BasicSender):
         while not self.timeout:#no acks, re-transmit
             ackno=self.wait_ack()
             if self.debug:
-                print 'ack received for sequence number %d' % (ackno)
+                print('ack received for sequence number %d' % (ackno))
             if ackno==acknomax:#highest ack possible received
                 del acknolist
                 del rcvdacknolist
@@ -108,9 +118,10 @@ class Sender(BasicSender.BasicSender):
     #waits for a single ack, returning -1 if error or timeout, or ackno if success
     def wait_ack(self):
         if self.debug:
-            print 'waiting for ack'
+            print('waiting for ack')
         try:
             message = self.receive(0.5)
+            message = message.decode() # added decoding here . it may not be needed with pickel
             if message == None:
                 return -1
             mtype, ackno, checksum, extra = self.split_packet(message)

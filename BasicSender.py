@@ -19,7 +19,7 @@ class BasicSender(object):
         if filename == None:
             self.infile = sys.stdin
         else:
-            self.infile = open(filename,"r")
+            self.infile = open(filename,"rb")
 
     # Waits until packet is received to return.
     def receive(self, timeout=None):
@@ -33,12 +33,14 @@ class BasicSender(object):
     def send(self, message, address=None):
         if address is None:
             address = (self.dest,self.dport)
-        self.sock.sendto(message, address)
+        self.sock.sendto(message.encode(), address) # added encoding here . it may not be needed with pickel
+        #self.sock.sendto(message, address)
 
     # Prepares a packet
     def make_packet(self,msg_type,seqno,msg):
         body = "%s|%d|%s|" % (msg_type,seqno,msg)
         checksum = Checksum.generate_checksum(body)
+        print("packet checksum = %s" % checksum)
         packet = "%s%s" % (body,checksum)
         return packet
 
