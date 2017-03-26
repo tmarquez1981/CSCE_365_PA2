@@ -5,6 +5,7 @@ import socket
 import Checksum
 import BasicSender
 import Packet
+import pickle
 
 '''
 This is a skeleton sender class. Create a fantastic transport protocol here.
@@ -20,7 +21,7 @@ class Sender(BasicSender.BasicSender):
         ackno=0
         eof = False
         while not eof:
-            self.infile.seek(seqno*4076,0)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+            self.infile.seek(seqno*4000,0)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
             eof, maxackno = self.send_window(seqno)
             ackno=self.wait_window(seqno, maxackno)
             if ackno!=-1:
@@ -43,7 +44,7 @@ class Sender(BasicSender.BasicSender):
             
     #read from file and send the data as a single packet
     def send_data(self,msgtype, seqno):
-        data = self.infile.read(4076)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+        data = self.infile.read(4000)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
         #if data == '':
         if not data:
             msgtype = 'end' # create end packet
@@ -121,7 +122,8 @@ class Sender(BasicSender.BasicSender):
             print('waiting for ack')
         try:
             message = self.receive(0.5)
-            message = message.decode() # added decoding here . it may not be needed with pickel
+            #message = message.decode() # added decoding here . it may not be needed with pickel
+            message = pickle.loads(message)
             if message == None:
                 return -1
             mtype, ackno, checksum, extra = self.split_packet(message)

@@ -3,6 +3,7 @@ import socket
 import random
 
 import Checksum
+import pickle
 
 '''
 This is the basic sender class. Your sender will extend this class and will
@@ -33,8 +34,11 @@ class BasicSender(object):
     def send(self, message, address=None):
         if address is None:
             address = (self.dest,self.dport)
-        self.sock.sendto(message.encode(), address) # added encoding here . it may not be needed with pickel
+        pickledMsg = pickle.dumps(message)
+        print(len(pickledMsg))
+        #self.sock.sendto(message.encode(), address) # added encoding here . it may not be needed with pickel
         #self.sock.sendto(message, address)
+        self.sock.sendto(pickledMsg, address)
 
     # Prepares a packet
     def make_packet(self,msg_type,seqno,msg):

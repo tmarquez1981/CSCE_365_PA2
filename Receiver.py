@@ -4,6 +4,7 @@ import sys
 import time
 
 import Checksum
+import pickle
 
 class Connection():
     def __init__(self,host,port,start_seq,debug=False):
@@ -65,7 +66,8 @@ class Receiver():
         while True:
             try:
                 message, address = self.receive()
-                message = message.decode() # added decoding here . it may not be needed with pickel
+                #message = message.decode() # added decoding here . it may not be needed with pickel
+                message = pickle.loads(message)
                 msg_type, seqno, data, checksum = self._split_message(message)
                 try:
                     seqno = int(seqno)
@@ -97,8 +99,10 @@ class Receiver():
     # sends a message to the specified address. Addresses are in the format:
     #   (IP address, port number)
     def send(self, message, address):
-        self.s.sendto(message.encode(), address)
+        #self.s.sendto(message.encode(), address)
         #self.s.sendto(message, address)
+        pickledMsg = pickle.dumps(message)
+        self.s.sendto(pickledMsg, address)
 
     # this sends an ack message to address with specified seqno
     def _send_ack(self, seqno, address):
