@@ -15,15 +15,77 @@ class Sender(BasicSender.BasicSender):
     
     # Main sending loop.
     def start(self):
-        self.WINDOW_SIZE=5
+        self.WINDOW_SIZE=4
         self.timeout=False
+        self.current_state = 'start'
+        self.errACKcount = 0
+        self.iterCount = 0
+        self.states={
+            'start': self.fast_start,
+            'erravd': self.cong_avoid,
+            'fast': self.fast_recovery
+        }
         seqno=0
-        self.slowStart(seqno)
+        while True:
+            seqno = self.states.get(self.current_state)(seqno)
+            if seqno == -1:
+                break
 
+    def fast_start(self, seqno):
+        self.WINDOW_SIZE += 1
+        eof, maxackno = self.send_window(seqno, self.WINDOW_SIZE)
+        ackno = self.wait_window(seqno, maxackno)
+        if self.errACKcount >= 2:
+            self.reset_vars()
+            self.current_state = 'fast'
+        elif self.iterCount >= 2:
+            self.reset_vars()
+            self.current_state = 'erravd'
+        if eof:
+            return -1
+        if ackno != -1:
+            return ackno
+        return seqno
+
+    def error_avoid(self, seqno):
+        eof, maxackno = self.send_window(seqno, self.WINDOW_SIZE)
+        ackno = self.wait_window(seqno, maxackno)
+        if self.errACKcount >= 2:
+            self.reset_vars()
+            self.current_state='fast'
+        elif self.iterCount >= 2:
+            self.reset_vars()
+            self.current_state='start'
+        if eof:
+            return -1
+        if ackno!=-1:
+            return ackno
+        return seqno
+
+    def fast_recovery(self, seqno):
+        if self.WINDOW_SIZE > 1:
+            self.WINDOW_SIZE -= 1
+        eof, maxackno = self.send_window(seqno, self.WINDOW_SIZE)
+        ackno = self.wait_window(seqno, maxackno)
+        if self.errACKcount >= 2:
+            self.current_state = 'fast'
+        else:
+            self.current_state = 'erravd'
+        self.reset_vars()
+        if eof:
+            return -1
+        if ackno != -1:
+            return ackno
+        return seqno
+
+    def reset_vars(self):
+        self.errACKcount = 0
+        self.iterCount = 0
 
    #sends MAX_WINDOW number of packets, returns eof=true/false and highest expected ackno
     def send_window(self, seqno, WINDOW_SIZE):
-        maxseqno=seqno+self.WINDOW_SIZE
+        maxseqno = seqno + self.WINDOW_SIZE
+        self.iterCount += 1
         #maxseqno = seqno * WINDOW_SIZE
         eof=False
         while seqno <= maxseqno and not eof:
@@ -66,12 +128,12 @@ class Sender(BasicSender.BasicSender):
         ackno=0
         rcvdacknolist=[]
         acknolist=self.make_acknolist(seqno, acknomax)
-        value=-1
+        value = -1
         while not self.timeout:#no acks, re-transmit
-            ackno=self.wait_ack()
+            ackno = self.wait_ack()
             if self.debug:
                 print('ack received for sequence number %d' % (ackno))
-            if ackno==acknomax:#highest ack possible received
+            if ackno == acknomax:#highest ack possible received
                 del acknolist
                 del rcvdacknolist
                 return acknomax #this will be next seqno for send_window
@@ -79,9 +141,13 @@ class Sender(BasicSender.BasicSender):
                 index = self.get_index(acknolist,ackno)
                 if index>=0:#if found in expected list
                     rcvdacknolist.append(ackno)#add to found list
+                else:
+                    self.errACKcount += 1
+            else:
+                self.errACKcount += 1
         if self.timeout:
             self.timeout=False
-        value=self.get_largest(rcvdacknolist)
+        value = self.get_largest(rcvdacknolist)
         del acknolist
         del rcvdacknolist
         return value
@@ -131,21 +197,6 @@ class Sender(BasicSender.BasicSender):
         except (socket.timeout, socket.error):
             self.timeout=True
         return -1
-
-    def slowStart(self, seqno):
-        mss = 4000
-        cwnd = 1
-        ssthresh = 4
-        ackno = 0
-        eof = False
-        while cwnd < ssthresh:
-            eof, maxackno = self.send_window(seqno, cwnd)
-            ackno = self.wait_window(seqno, maxackno)
-            if ackno != -1:
-                seqno=ackno
-            cwnd += 1
-            if eof:
-                break
 
 '''
 This will be run if you run this script from the command line. You should not
