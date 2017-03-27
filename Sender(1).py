@@ -22,7 +22,7 @@ class Sender(BasicSender.BasicSender):
         self.iterCount = 0
         self.states={
             'start': self.fast_start,
-            'erravd': self.cong_avoid,
+            'erravd': self.error_avoid,
             'fast': self.fast_recovery
         }
         seqno=0
