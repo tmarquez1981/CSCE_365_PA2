@@ -1,0 +1,8 @@
+﻿Testing Done:
+On a linux command line, testing for the program was done using linux tools such as a netem and iptables. We tested for packet delays, set for a 100ms packet delays. Packet loss was tested by dropping every 10 packet. 
+
+Commands used: for delay) tc qdisc add lo root netem delay 100ms
+		     for loss) iptables -A INPUT -p udp –sport 33122 -m statistic –mode nth –every 20 –packet 10 -j DROP
+
+
+
