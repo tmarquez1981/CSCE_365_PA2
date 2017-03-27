@@ -92,11 +92,13 @@ class Receiver():
 
     # sends a message to the specified address. Addresses are in the format:
     #   (IP address, port number)
+    # The messages are pickled before they are sent for consistency
     def send(self, message, address):
         pickledMsg = pickle.dumps(message)
         self.s.sendto(pickledMsg, address)
 
     # this sends an ack message to address with specified seqno
+    # ack is pickled for consistency
     def _send_ack(self, seqno, address):
         body = "ack", seqno
         pickledBody = pickle.dumps(body)
@@ -105,6 +107,7 @@ class Receiver():
         message = body, checksum
         self.send(message, address)
 
+    # handles the start state
     def _handle_start(self, seqno, data, address):
         if not address in self.connections:
             self.connections[address] = Connection(address[0],address[1],seqno,self.debug)
@@ -148,6 +151,9 @@ class Receiver():
     def _handle_other(self, seqno, data, address):
         pass
 
+    # split_message function splits the incoming message
+    # message is a tuple in format [body, checksum]
+    # the body is [msg_type, seqno, data]
     def _split_message(self, message):
         body = message[0]
         msg_type, seqno = body[0:2]
