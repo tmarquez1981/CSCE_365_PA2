@@ -90,9 +90,9 @@ class Sender(BasicSender.BasicSender):
         eof=False
         while seqno <= maxseqno and not eof:
             if seqno==0:
-                eof, seqno = self.send_data('start',seqno)#special case of the first packet
+                eof = self.send_data('start',seqno)#special case of the first packet
             else:
-                eof, seqno = self.send_data('data',seqno)
+                eof = self.send_data('data',seqno)
             seqno+=1
         if eof:
             seqno-=1
@@ -113,7 +113,7 @@ class Sender(BasicSender.BasicSender):
             #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-            return True, seqno
+            return True#, seqno
         else:
             newPacket = Packet.Packet(msgtype, seqno, data) # create a packet object to encapsulate the packet info
             packet = newPacket.make_packet()
@@ -121,7 +121,7 @@ class Sender(BasicSender.BasicSender):
             #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-        return False, seqno
+        return False#, seqno
 
     #gets acks from seqno -- seqnomax for ackno, returns highest seqno (to be used for next window)
     def wait_window(self, seqno, acknomax):
@@ -191,7 +191,7 @@ class Sender(BasicSender.BasicSender):
             message = pickle.loads(message)
             if message == None:
                 return -1
-            mtype, ackno, checksum, extra = self.split_packet(message)
+            mtype, ackno, checksum = self.split_packet(message)
             if Checksum.validate_checksum(message):
                 return int(ackno)
         except (socket.timeout, socket.error):

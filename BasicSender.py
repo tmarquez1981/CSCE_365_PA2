@@ -48,12 +48,23 @@ class BasicSender(object):
         packet = "%s%s" % (body,checksum)
         return packet
 
+    #def split_packet(self, message):
+     #   pieces = message.split('|')
+      #  msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
+       # checksum = pieces[-1] # last is always treated as checksum
+        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
+        #return msg_type, seqno, data, checksum
+
     def split_packet(self, message):
-        pieces = message.split('|')
-        msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
-        checksum = pieces[-1] # last is always treated as checksum
-        data = '|'.join(pieces[2:-1]) # everything in between is considered data
-        return msg_type, seqno, data, checksum
+        #pieces = message.split('|')
+        #msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
+        body = message[0]
+        msg_type, seqno = body[0:2]
+        checksum = message[-1]
+        #checksum = pieces[-1] # last is always treated as checksum
+        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
+        #data = body[2]
+        return msg_type, seqno, checksum
 
     # Main sending loop.
     def start(self):

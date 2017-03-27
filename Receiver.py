@@ -14,7 +14,7 @@ class Connection():
         self.host = host
         self.port = port
         self.max_buf_size = 5
-        self.outfile = open("%s.%d" % (host,port),"w")
+        self.outfile = open("%s.%d" % (host,port),"wb")
         self.seqnums = {} # enforce single instance of each seqno
 
     def ack(self,seqno, data):
@@ -65,9 +65,9 @@ class Receiver():
     def start(self):
         while True:
             try:
-                message, address = self.receive()
+                pickledMsg, address = self.receive()
                 #message = message.decode() # added decoding here . it may not be needed with pickel
-                message = pickle.loads(message)
+                message = pickle.loads(pickledMsg)
                 msg_type, seqno, data, checksum = self._split_message(message)
                 try:
                     seqno = int(seqno)
@@ -106,9 +106,13 @@ class Receiver():
 
     # this sends an ack message to address with specified seqno
     def _send_ack(self, seqno, address):
+        body = "ack", seqno
+        pickledBody = pickle.dumps(body)
         m = "ack|%d|" % seqno
-        checksum = Checksum.generate_checksum(m)
-        message = "%s%s" % (m, checksum)
+        checksum = Checksum.generate_checksum(pickledBody)
+        #checksum = Checksum.generate_checksum(m.encode())
+        message = body, checksum
+        #message = "%s%s" % (m, checksum)
         self.send(message, address)
 
     def _handle_start(self, seqno, data, address):
@@ -164,10 +168,14 @@ class Receiver():
         pass
 
     def _split_message(self, message):
-        pieces = message.split('|')
-        msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
-        checksum = pieces[-1] # last is always treated as checksum
-        data = '|'.join(pieces[2:-1]) # everything in between is considered data
+        #pieces = message.split('|')
+        #msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
+        body = message[0]
+        msg_type, seqno = body[0:2]
+        checksum = message[-1]
+        #checksum = pieces[-1] # last is always treated as checksum
+        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
+        data = body[2]
         return msg_type, seqno, data, checksum
 
     def _cleanup(self):
