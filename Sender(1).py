@@ -18,25 +18,19 @@ class Sender(BasicSender.BasicSender):
         self.WINDOW_SIZE=5
         self.timeout=False
         seqno=0
-        ackno=0
-        eof = False
-        while not eof:
-            self.infile.seek(seqno*4000,0)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
-            eof, maxackno = self.send_window(seqno)
-            ackno=self.wait_window(seqno, maxackno)
-            if ackno!=-1:
-                seqno=ackno
+        self.slowStart(seqno)
 
 
    #sends MAX_WINDOW number of packets, returns eof=true/false and highest expected ackno
-    def send_window(self, seqno):
+    def send_window(self, seqno, WINDOW_SIZE):
         maxseqno=seqno+self.WINDOW_SIZE
+        #maxseqno = seqno * WINDOW_SIZE
         eof=False
-        while seqno<maxseqno and not eof:
+        while seqno <= maxseqno and not eof:
             if seqno==0:
-                eof = self.send_data('start',seqno)#special case of the first packet
+                eof, seqno = self.send_data('start',seqno)#special case of the first packet
             else:
-                eof = self.send_data('data',seqno)
+                eof, seqno = self.send_data('data',seqno)
             seqno+=1
         if eof:
             seqno-=1
@@ -44,23 +38,28 @@ class Sender(BasicSender.BasicSender):
             
     #read from file and send the data as a single packet
     def send_data(self,msgtype, seqno):
+        self.infile.seek(seqno * 4000, 0)  # 4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+        #self.infile.seek(seqno, 0) # added seek here, seek based on the seqno if seqno increments by data size
         data = self.infile.read(4000)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+        #seqno = seqno + len(data) + 1  # increment seqno based on data sent
         #if data == '':
         if not data:
             msgtype = 'end' # create end packet
             newPacket = Packet.Packet(msgtype, seqno, data)
             packet = newPacket.make_packet()
             self.send(packet)
+            #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-            return True
+            return True, seqno
         else:
             newPacket = Packet.Packet(msgtype, seqno, data) # create a packet object to encapsulate the packet info
             packet = newPacket.make_packet()
             self.send(packet)
+            #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-        return False
+        return False, seqno
 
     #gets acks from seqno -- seqnomax for ackno, returns highest seqno (to be used for next window)
     def wait_window(self, seqno, acknomax):
@@ -133,6 +132,20 @@ class Sender(BasicSender.BasicSender):
             self.timeout=True
         return -1
 
+    def slowStart(self, seqno):
+        mss = 4000
+        cwnd = 1
+        ssthresh = 4
+        ackno = 0
+        eof = False
+        while cwnd < ssthresh:
+            eof, maxackno = self.send_window(seqno, cwnd)
+            ackno = self.wait_window(seqno, maxackno)
+            if ackno != -1:
+                seqno=ackno
+            cwnd += 1
+            if eof:
+                break
 
 '''
 This will be run if you run this script from the command line. You should not
