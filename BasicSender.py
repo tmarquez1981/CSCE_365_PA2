@@ -31,39 +31,22 @@ class BasicSender(object):
             return None
 
     # Sends a packet to the destination address.
+    # Uses import.pickle to convert tuple packet
+    # into a byte stream
+    # It seemed the most efficient way to send
+    # not only text files, but image files
+    # All files are handled the same
     def send(self, message, address=None):
         if address is None:
             address = (self.dest,self.dport)
         pickledMsg = pickle.dumps(message)
         print(len(pickledMsg))
-        #self.sock.sendto(message.encode(), address) # added encoding here . it may not be needed with pickel
-        #self.sock.sendto(message, address)
         self.sock.sendto(pickledMsg, address)
 
-    # Prepares a packet
-    def make_packet(self,msg_type,seqno,msg):
-        body = "%s|%d|%s|" % (msg_type,seqno,msg)
-        checksum = Checksum.generate_checksum(body)
-        print("packet checksum = %s" % checksum)
-        packet = "%s%s" % (body,checksum)
-        return packet
-
-    #def split_packet(self, message):
-     #   pieces = message.split('|')
-      #  msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
-       # checksum = pieces[-1] # last is always treated as checksum
-        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
-        #return msg_type, seqno, data, checksum
-
     def split_packet(self, message):
-        #pieces = message.split('|')
-        #msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
         body = message[0]
         msg_type, seqno = body[0:2]
         checksum = message[-1]
-        #checksum = pieces[-1] # last is always treated as checksum
-        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
-        #data = body[2]
         return msg_type, seqno, checksum
 
     # Main sending loop.

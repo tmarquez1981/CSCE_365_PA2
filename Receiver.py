@@ -66,7 +66,6 @@ class Receiver():
         while True:
             try:
                 pickledMsg, address = self.receive()
-                #message = message.decode() # added decoding here . it may not be needed with pickel
                 message = pickle.loads(pickledMsg)
                 msg_type, seqno, data, checksum = self._split_message(message)
                 try:
@@ -74,7 +73,6 @@ class Receiver():
                 except:
                     raise ValueError
                 if debug:
-                    #print("%s %d %s" % (msg_type, seqno, checksum))
                     print("%s %d %s %s" % (msg_type, seqno, data, checksum))
                 if Checksum.validate_checksum(message):
                     self.MESSAGE_HANDLER.get(msg_type,self._handle_other)(seqno, data, address)
@@ -87,10 +85,6 @@ class Receiver():
                 self._cleanup()
             except (KeyboardInterrupt, SystemExit):
                 exit()
-            #except ValueError, e:
-             #   if self.debug:
-              #      print e
-               # pass # ignore
 
     # waits until packet is received to return
     def receive(self):
@@ -99,8 +93,6 @@ class Receiver():
     # sends a message to the specified address. Addresses are in the format:
     #   (IP address, port number)
     def send(self, message, address):
-        #self.s.sendto(message.encode(), address)
-        #self.s.sendto(message, address)
         pickledMsg = pickle.dumps(message)
         self.s.sendto(pickledMsg, address)
 
@@ -110,9 +102,7 @@ class Receiver():
         pickledBody = pickle.dumps(body)
         m = "ack|%d|" % seqno
         checksum = Checksum.generate_checksum(pickledBody)
-        #checksum = Checksum.generate_checksum(m.encode())
         message = body, checksum
-        #message = "%s%s" % (m, checksum)
         self.send(message, address)
 
     def _handle_start(self, seqno, data, address):
@@ -149,15 +139,6 @@ class Receiver():
         del self.connections[address]
         now = time.time()
         self.last_cleanup = now
-        #if address in self.connections:
-         #   conn = self.connections[address]
-          #  ackno, res_data = conn.ack(seqno,data)
-           # for l in res_data:
-            #    if self.debug:
-             #       print(l)
-              #  conn.record(l)
-            #self._send_ack(ackno, address)
-        #conn.end()
 
     # I'll do the ack-ing here, buddy
     def _handle_ack(self, seqno, data, address):
@@ -168,13 +149,9 @@ class Receiver():
         pass
 
     def _split_message(self, message):
-        #pieces = message.split('|')
-        #msg_type, seqno = pieces[0:2] # first two elements always treated as msg type and seqno
         body = message[0]
         msg_type, seqno = body[0:2]
         checksum = message[-1]
-        #checksum = pieces[-1] # last is always treated as checksum
-        #data = '|'.join(pieces[2:-1]) # everything in between is considered data
         data = body[2]
         return msg_type, seqno, data, checksum
 

@@ -86,7 +86,6 @@ class Sender(BasicSender.BasicSender):
     def send_window(self, seqno, WINDOW_SIZE):
         maxseqno = seqno + self.WINDOW_SIZE
         self.iterCount += 1
-        #maxseqno = seqno * WINDOW_SIZE
         eof=False
         while seqno <= maxseqno and not eof:
             if seqno==0:
@@ -100,28 +99,24 @@ class Sender(BasicSender.BasicSender):
             
     #read from file and send the data as a single packet
     def send_data(self,msgtype, seqno):
-        self.infile.seek(seqno * 4000, 0)  # 4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
-        #self.infile.seek(seqno, 0) # added seek here, seek based on the seqno if seqno increments by data size
-        data = self.infile.read(4000)#4076B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
-        #seqno = seqno + len(data) + 1  # increment seqno based on data sent
-        #if data == '':
+        self.infile.seek(seqno * 4000, 0)  # 4000B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+        data = self.infile.read(4000) # 4000B to account for bytes used by seqno, '|' chars, msgtype, and checksum; receiver takes 4096B
+                                      # We chose 300 because picling the packets added some weight
         if not data:
             msgtype = 'end' # create end packet
             newPacket = Packet.Packet(msgtype, seqno, data)
             packet = newPacket.make_packet()
             self.send(packet)
-            #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-            return True#, seqno
+            return True
         else:
             newPacket = Packet.Packet(msgtype, seqno, data) # create a packet object to encapsulate the packet info
             packet = newPacket.make_packet()
             self.send(packet)
-            #seqno = seqno + len(data) # increment seqno based on data sent
             if self.debug:
                 print('Sent # %d' % (seqno))
-        return False#, seqno
+        return False
 
     #gets acks from seqno -- seqnomax for ackno, returns highest seqno (to be used for next window)
     def wait_window(self, seqno, acknomax):
@@ -187,7 +182,6 @@ class Sender(BasicSender.BasicSender):
             print('waiting for ack')
         try:
             message = self.receive(0.5)
-            #message = message.decode() # added decoding here . it may not be needed with pickel
             message = pickle.loads(message)
             if message == None:
                 return -1
